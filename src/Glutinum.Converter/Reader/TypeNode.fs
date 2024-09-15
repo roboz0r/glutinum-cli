@@ -220,77 +220,8 @@ let readTypeNode
         |> GlueType.FunctionType
 
     | Ts.SyntaxKind.TypeQuery ->
-        let typeNodeQuery = typeNode :?> Ts.TypeQueryNode
-
-        let typ = checker.getTypeAtLocation !!typeNodeQuery.exprName
-
-        // This is safe as both cases have a `kind` field
-        let exprNameKind: Ts.SyntaxKind = typeNodeQuery.exprName?kind
-        // This logic is highly overlapping with readTypeUsingFlags
-        // It should be refactored to achieve a sane flow
-        match typ.flags, typ.getSymbol (), exprNameKind with
-        | HasTypeFlags Ts.TypeFlags.Object, None, Ts.SyntaxKind.Identifier ->
-            let exprName: Ts.Identifier = !!typeNodeQuery.exprName
-
-            let symbolOpt = checker.getSymbolAtLocation exprName
-
-            match symbolOpt with
-            | None ->
-                generateReaderError
-                    "type node (TypeQuery)"
-                    "Missing symbol"
-                    typeNode
-                |> failwith
-
-            | Some aliasSymbol ->
-                match aliasSymbol.declarations with
-                | Some declarations ->
-                    if declarations.Count <> 1 then
-                        generateReaderError
-                            "type node (TypeQuery)"
-                            "Expected exactly one declaration"
-                            typeNode
-                        |> failwith
-
-                    let declaration = declarations.[0]
-
-                    match declaration.kind with
-                    | Ts.SyntaxKind.VariableDeclaration ->
-                        let variableDeclaration =
-                            declaration :?> Ts.VariableDeclaration
-
-                        match variableDeclaration.``type`` with
-                        | Some typeNode ->
-                            match typeNode.kind with
-                            | Ts.SyntaxKind.TypeOperator ->
-                                let typeOperatorNode =
-                                    typeNode :?> Ts.TypeOperatorNode
-
-                                reader.ReadTypeOperatorNode typeOperatorNode
-                            | _ -> readTypeUsingFlags reader typ
-
-                        | None ->
-                            generateReaderError
-                                "type node (TypeQuery)"
-                                "Missing type"
-                                typeNode
-                            |> failwith
-
-                    | unsupported ->
-                        generateReaderError
-                            "type node (TypeQuery)"
-                            $"Unsupported declaration kind {SyntaxKind.name unsupported}"
-                            typeNode
-                        |> failwith
-
-                | None ->
-                    generateReaderError
-                        "type node (TypeQuery)"
-                        "Missing declarations"
-                        typeNode
-                    |> failwith
-
-        | _ -> readTypeUsingFlags reader typ
+        let typeQueryNode = typeNode :?> Ts.TypeQueryNode
+        TypeQueryNode.readTypeQueryNode reader typeQueryNode
 
     | Ts.SyntaxKind.LiteralType ->
         let literalTypeNode = typeNode :?> Ts.LiteralTypeNode
