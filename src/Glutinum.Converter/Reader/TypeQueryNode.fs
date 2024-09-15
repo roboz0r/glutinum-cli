@@ -8,14 +8,7 @@ open Fable.Core.JsInterop
 open Glutinum.Converter.Reader.Utils
 open FsToolkit.ErrorHandling
 
-module Result =
-    let ofOptionOrError error opt =
-        match opt with
-        | Some value -> Ok value
-        | None -> Error error
-
 let readTypeQueryNode
-
     (reader: ITypeScriptReader)
     (typeQueryNode: Ts.TypeQueryNode)
     =
@@ -34,7 +27,7 @@ let readTypeQueryNode
         result {
             let! aliasSymbol =
                 checker.getSymbolAtLocation exprName
-                |> Result.ofOptionOrError (
+                |> Result.requireSome (
                     generateReaderError
                         "type node (TypeQuery)"
                         "Missing symbol"
@@ -43,7 +36,7 @@ let readTypeQueryNode
 
             let! declarations =
                 aliasSymbol.declarations
-                |> Result.ofOptionOrError (
+                |> Result.requireSome (
                     generateReaderError
                         "type node (TypeQuery)"
                         "Missing declarations"
@@ -51,7 +44,6 @@ let readTypeQueryNode
                 )
 
             let! declaration =
-
                 if declarations.Count <> 1 then
                     Error(
                         generateReaderError
@@ -77,7 +69,7 @@ let readTypeQueryNode
 
             let! typeNode =
                 variableDeclaration.``type``
-                |> Result.ofOptionOrError (
+                |> Result.requireSome (
                     generateReaderError
                         "type node (TypeQuery)"
                         "Missing type"
@@ -87,7 +79,6 @@ let readTypeQueryNode
             match typeNode.kind with
             | Ts.SyntaxKind.TypeOperator ->
                 let typeOperatorNode = typeNode :?> Ts.TypeOperatorNode
-
                 return reader.ReadTypeOperatorNode typeOperatorNode
 
             | unsupported ->
